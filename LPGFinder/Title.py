@@ -6,16 +6,23 @@ from urllib.request import Request, urlopen
 from urllib.parse import urlencode, quote_plus
 import tkinter.messagebox
 import WebBrowser
+import telepot
+import random
+
+
+
+import http.client
+import xml.etree.ElementTree as ET
 g_Tk = Tk()
 g_Tk.geometry("900x640")
 g_Tk["bg"]="navy"
 DataList = []
-
+addrlist = []
 def InitTopText():
     TempFont = font.Font(g_Tk, size=45, weight='bold', family = 'Consolas')
-    MainText = Label(g_Tk, font = TempFont, text="Welcome to My LPG FINDER")
+    MainText = Label(g_Tk, font = TempFont, text="전기차 충전소 어플")
     MainText.pack()
-    MainText.place(x=45)
+    MainText.place(x=170)
     MainText["bg"] = "white"
 
     SFont = font.Font(g_Tk, size=20, weight='bold', family='Consolas')
@@ -40,49 +47,61 @@ def InitSearchButton():
     SearchButton.place(x=820, y=110)
 
 def SearchButtonAction():
-    global SearchListBox
+    global SearchListBox, InputLabel
 
     RenderText.configure(state='normal')
     RenderText.delete(0.0, END)
 
-    SearchLPG()
+    SearchLPG(InputLabel.get())
 
     RenderText.configure(state='disabled')
 
 
-def SearchLPG():
-
-
+def SearchLPG(region):
+    global addrlist, InputLabel
     url = 'http://openapi.kepco.co.kr/service/EvInfoServiceV2/getEvSearchList'
     queryParams = '?' + urlencode(
-        {quote_plus('ServiceKey'): 'F4ZSQFrTrgSxVr9UoGJ8XvzDDhNg6mZmgfa4iAhVTNbcW2j7rrsJa7TR1De8UcZ1gQtaiyN0hbmcaeBTZGMbNw', quote_plus('pageNo'): '1', quote_plus('numOfRows'): '10',
-         quote_plus('addr'): '인천광역시 계양구 작전동 256-2 지상주차장 4층 E10번'})
+        {quote_plus('ServiceKey'): 'OsStwAQk2Orc+hEyRvDjXQXKRX3Z5M7VtxAZfSkdhf6ba+7xboEt9vYj6/2ZFalb1BoIWYgNkO7jxk5r7E1Rag==', quote_plus('pageNo'): '1', quote_plus('numOfRows'): '10',
+         quote_plus('addr'): region})
 
     request = Request(url + queryParams)
     request.get_method = lambda: 'GET'
-    response_body = urlopen(request).read()
-    print
-    response_body
+    response_body = urlopen(request).read().decode("utf-8")
 
-    for i in range(len(queryParams)):
+    tree = ET.ElementTree(ET.fromstring(response_body))
+    charge = tree.iter("item")
+
+    addrlist.clear()
+    for charging in charge:
+        addr = charging.find("addr").text
+        addrlist.append(addr)
+
+    for i in addrlist:
+        print(i)
+
+    for i in range(len(addrlist)):
         RenderText.insert(INSERT, "[")
         RenderText.insert(INSERT, i + 1)
         RenderText.insert(INSERT, "] ")
-        RenderText.insert(INSERT, "주소: ")
-        RenderText.insert(INSERT, queryParams[i][0])
-        RenderText.insert(INSERT, "\n")
-        RenderText.insert(INSERT, "타입: ")
-        RenderText.insert(INSERT, queryParams[i][1])
-        RenderText.insert(INSERT, "\n")
-        RenderText.insert(INSERT, "ID: ")
-        RenderText.insert(INSERT, queryParams[i][2])
+        #RenderText.insert(INSERT, "시설명: ")
+        RenderText.insert(INSERT, addrlist[i])
         RenderText.insert(INSERT, "\n\n")
 
 
 
+
+
+def Initteller():
+    TempFont = font.Font(g_Tk, size=12, weight='bold', family='Consolas')
+    Button5 = Button(g_Tk, font=TempFont, text="Telegram", command=TelButtonAction)
+    Button5.pack()
+    Button5.place(x=800, y=600)
+    Button5["bg"] = "white"
+
+
 def InitOneButton():
     TempFont = font.Font(g_Tk, size=12, weight='bold', family = 'Consolas')
-    Button1 = Button(g_Tk, font = TempFont, text="     현위치 LPG FINDER     ",  command=OneButtonAction, width=30, height=7)
+    Button1 = Button(g_Tk, font = TempFont, text="     현위치 전기차 충전소     ",  command=OneButtonAction, width=30, height=7)
     Button1.pack()
     Button1.place(x=150, y=200)
     Button1["bg"]="cyan"
@@ -91,14 +110,14 @@ def InitOneButton():
 
 def InitTwoButton():
     TempFont = font.Font(g_Tk, size=12, weight='bold', family = 'Consolas')
-    Button2 = Button(g_Tk, font=TempFont, text="     지역 LPG FINDER     ", command=TwoButtonAction, width=30, height=7)
+    Button2 = Button(g_Tk, font=TempFont, text="     지역 전기차 충전소     ", command=TwoButtonAction, width=30, height=7)
     Button2.pack()
     Button2.place(x=480, y=200)
     Button2["bg"] = "cyan"
 
 def InitThreeButton():
     TempFont = font.Font(g_Tk, size=12, weight='bold', family = 'Consolas')
-    Button3 = Button(g_Tk, font=TempFont, text="     길찾기 LPG FINDER     ", command=ThreeButtonAction, width=30,
+    Button3 = Button(g_Tk, font=TempFont, text="     길찾기     ", command=ThreeButtonAction, width=30,
                      height=7)
     Button3.pack()
     Button3.place(x=150, y=400)
@@ -106,10 +125,20 @@ def InitThreeButton():
 
 def InitFourButton():
     TempFont = font.Font(g_Tk, size=12, weight='bold', family = 'Consolas')
-    Button4 = Button(g_Tk, font=TempFont, text="     지역별 LPG 분포도     ", command=FourButtonAction, width=30, height=7)
+    Button4 = Button(g_Tk, font=TempFont, text="     지역별 충전소 분포도     ", command=FourButtonAction, width=30, height=7)
     Button4.pack()
     Button4.place(x=480, y=400)
     Button4["bg"] = "cyan"
+
+
+def TelButtonAction():
+    global addrlist
+    chatId = '1585067283'
+    chatbot = telepot.Bot('1886153329:AAH1cAyR678fnRFc9W4D_cVXm12P-_dZZZI')
+    for i in range(len(addrlist)):
+        chatbot.sendMessage(chatId, addrlist[i])
+
+
 
 
 
@@ -123,10 +152,41 @@ def TwoButtonAction():
     InitRenderText()
 
 def ThreeButtonAction():
-    pass
+    WebBrowser.main()
 
 def FourButtonAction():
-    pass
+    #global addrlist
+    import tkinter as tk
+    root = tk.Tk()
+    root.title("Tkinter Bar and Pie Graph")
+    tk.Label(root, text='Bar Chart').pack()
+    data = [10,86,43,35,26,11,9,11,33,53,28,15,10,20,50,18,58 ]
+    c_width = 600
+    c_height = 500
+    c = tk.Canvas(root, width=c_width, height=c_height, bg='white')
+    c.pack()
+
+    # experiment with the variables below size to fit your needs
+
+    y_stretch = 5
+    y_gap = 20
+    x_stretch = 10
+    x_width = 20
+    x_gap = 20
+
+    k=['인천','서울','경기','강원','충북','충남','세종','대전','경북','경남','대구','울산','부산','전북','전남','광주','제주']
+
+    for x, y in enumerate(data):
+        # calculate reactangle coordinates
+        x0 = x * x_stretch + x * x_width + x_gap
+        y0 = c_height - (y * y_stretch + y_gap)
+        x1 = x * x_stretch + x * x_width + x_width + x_gap
+        y1 = c_height - y_gap
+        # Here we draw the bar
+        c.create_rectangle(x0, y0, x1, y1, fill="red")
+        for i in range(len(k)):
+            c.create_text(20 + i * 30, 20, anchor=tk.SW, text=k[i])
+
 
 def InitRenderText():
     global RenderText
@@ -144,11 +204,17 @@ def InitRenderText():
 
     RenderText.configure(state='disabled')
 
+
+def drawHistogram(self):
+    for i in range(20):
+        self.canvas.create_rectangle()
+
+
 InitTopText()
 
 
 
-
+Initteller()
 
 InitOneButton()
 
@@ -162,5 +228,4 @@ InitFourButton()
 
 
 g_Tk.mainloop()
-
 
